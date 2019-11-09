@@ -184,7 +184,7 @@ int main()
 
     std::cout << "Rows: " << size_y << " | Cols: " << size_x << std::endl;
 
-
+    float sums[domains];
 
     #pragma omp parallel
     {
@@ -215,16 +215,26 @@ int main()
         {
             for(int x = border_half; x < size_x-border_half; x++)
             {
-                //#pragma omp for simd collapse(2)
+                float data[border*border] = {0};
+                sums[tid] = 0;
+                #pragma omp for simd reduction(+:sums[tid]) collapse(2)
                 for(int a = -border_half; a < border_half; a++)
                 {
                     for(int b = -border_half; b < border_half; b++)
                     {
-                        new_image2[y*size_x+x] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
-
+                        sums[tid] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
+                        //data[a*border+(b+border_half)] = (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
                     }
                 }
-                new_image2[y*size_x+x] /= number_of_pixels_in_circle;
+
+                /*
+                for(int i = 0; i < border*border;i++)
+                {
+                    sum += data[i];
+                }
+                */
+
+                new_image2[y*size_x+x] = sums[tid] / number_of_pixels_in_circle;
             }
         }
         #pragma omp barrier
@@ -239,7 +249,7 @@ int main()
 
 
         //#pragma omp for
-        if(tid == 15)
+        if(tid == 0)
         {
             for(int y = start_second_loop; y < end_second_loop; y++)
             {
