@@ -43,6 +43,9 @@ int main()
             const float val_fre = frequency[y][x];
             light_array[y*size_x+x] = val_li;
             frequency_array[y*size_x+x] = val_fre;
+
+            new_image[y*size_x+x] = 0;
+            new_image2[y*size_x+x] = 0;
         }
     }
 
@@ -181,27 +184,44 @@ int main()
 
     std::cout << "Rows: " << size_y << " | Cols: " << size_x << std::endl;
 
-    int x,y,a,b;
 
-    #pragma omp parallel private (x,y,a,b)
+
+    #pragma omp parallel
     {
         const int number_of_threads = domains;
         const int tid = omp_get_thread_num();
         const int start_loop = tid*work_size_per_worker+border_half;
         //const int local_work_end = tid < (number_of_threads-1) ? start_loop+work_size_per_worker : work_size + border_half;
         const int local_work_end = start_loop+work_size_per_worker;
-        const int leftover_work = size_y - work_size_per_worker*number_of_threads;
+        const int leftover_work = work_size - work_size_per_worker*number_of_threads;
+        const int start_second_loop = work_size-leftover_work+border_half;
+        const int end_second_loop = size_y-border_half;
 
-        for(y = start_loop; y < local_work_end; y++)
+        #pragma omp critical
         {
-            for(x = border_half; x < size_x-border_half; x++)
+            std::cout << "tid:" << tid << " Difference between start_loop and local_work_end: " << start_loop << "|" << local_work_end << std::endl;
+        }
+
+        #pragma omp critical
+        {
+            if(tid == 15)
             {
-                #pragma omp for simd collapse(2)
-                for(a = -border_half; a < border_half; a++)
+                std::cout << "tid:" << tid << " | start: " << start_loop << " | end: " << local_work_end << " | size_y: " << size_y << " | worksize: " << work_size << "| per worker: " << work_size_per_worker << std::endl;
+            }
+        }
+
+
+        for(int y = start_loop; y < local_work_end; y++)
+        {
+            for(int x = border_half; x < size_x-border_half; x++)
+            {
+                //#pragma omp for simd collapse(2)
+                for(int a = -border_half; a < border_half; a++)
                 {
-                    for(b = -border_half; b < border_half; b++)
+                    for(int b = -border_half; b < border_half; b++)
                     {
                         new_image2[y*size_x+x] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
+
                     }
                 }
                 new_image2[y*size_x+x] /= number_of_pixels_in_circle;
@@ -209,20 +229,33 @@ int main()
         }
         #pragma omp barrier
 
-        #pragma omp for
-        for(y = size_y-leftover_work; y < size_y; y++)
+        #pragma omp critical
         {
-            for(x = border_half; x < size_x-border_half; x++)
+            if(tid == 15)
             {
-                for(a = -border_half; a < border_half; a++)
-                {
-                    for(b = -border_half; b < border_half; b++)
-                    {
-                        new_image2[y*size_x+x] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
-                    }
-                }
-                new_image2[y*size_x+x] /= number_of_pixels_in_circle;
+                std::cout << "tid:" << tid << " | local_work_end" << local_work_end << " | work_size:" << work_size << " | border_half " << border_half << " | leftover_work: " << leftover_work << " | start second loop: " <<  work_size-leftover_work+border_half << " | end second loop:" << size_y-border_half << std::endl;
             }
+        }
+
+
+        //#pragma omp for
+        if(tid == 15)
+        {
+            for(int y = start_second_loop; y < end_second_loop; y++)
+            {
+                for(int x = border_half; x < size_x-border_half; x++)
+                {
+                    for(int a = -border_half; a < border_half; a++)
+                    {
+                        for(int b = -border_half; b < border_half; b++)
+                        {
+                            new_image2[y*size_x+x] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
+                        }
+                    }
+                    new_image2[y*size_x+x] /= number_of_pixels_in_circle;
+                }
+            }
+
         }
     }
 
