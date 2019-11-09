@@ -1,6 +1,8 @@
 #include <iostream>
 #include <omp.h>
 #include <png++/png.hpp>
+//#include <cmath>
+
 
 using namespace std;
 
@@ -26,6 +28,7 @@ int main()
 
     float* image = combined_array;
     float* new_image = new float[size_x*size_y];
+    float* new_image2 = new float[size_x*size_y];
     //float* new_image2 = combined_array;
 
     float maximum_frequency = 0;
@@ -60,7 +63,6 @@ int main()
 
     std::cout << "max_light: " << max_light << std::endl;
 
-
     #pragma omp parallel for
     for(int y = 0; y < size_y; y++)
     {
@@ -84,6 +86,11 @@ int main()
     const int border_half = border/2;
     const int border_squared = border*border;
     const float circle_radius_squared = (border/2)*(border/2);
+    const int number_of_pixels_in_circle = 32; //calculate this
+
+
+
+
 
 	int A[1] = {-1};
 	#pragma omp target
@@ -119,17 +126,19 @@ int main()
                     }
                 }
 
-                new_image[y*size_x+x] /= border_squared;
+                new_image[y*size_x+x] /= number_of_pixels_in_circle;
             }
         }
     }
     */
+
 
     std::cout << "Runtime gpu: " << omp_get_wtime()-start_time << std::endl;
 
     //average on CPU
     start_time = omp_get_wtime();
     //#pragma omp parallel for
+
     #pragma omp parallel for
     for(int y = border_half; y < size_y-border_half; y++)
     {
@@ -140,16 +149,97 @@ int main()
                 //#pragma omp for simd
                 for(int b = -border_half; b < border_half; b++)
                 {
-                    new_image[y*size_x+x] += (a*a+b*b < circle_radius_squared) ? image[(y+a)*size_x+(x+b) ] : 0;
+                    new_image[y*size_x+x] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
                 }
             }
-            new_image[y*size_x+x] /= border_squared;
+            new_image[y*size_x+x] /= number_of_pixels_in_circle;
         }
     }
     std::cout << "Runtime classic: " << omp_get_wtime()-start_time << std::endl;
 
 
+    //=====================================================
 
-    cout << "Hello World!" << endl;
+    int domains;
+
+    #pragma omp parallel
+    {
+        #pragma omp critical
+        {
+            domains = omp_get_num_threads();
+        }
+    }
+    const int work_size = size_y - border_half - border_half;
+    const int work_size_per_worker = work_size/domains;
+
+    std::cout << "work_size_per_worker: " << work_size_per_worker << " | work_size: " << work_size << " | domains: " << domains << std::endl;
+
+
+    //average on CPU
+    start_time = omp_get_wtime();
+    //#pragma omp parallel for
+
+    std::cout << "Rows: " << size_y << " | Cols: " << size_x << std::endl;
+
+    int x,y,a,b;
+
+    #pragma omp parallel private (x,y,a,b)
+    {
+        const int number_of_threads = domains;
+        const int tid = omp_get_thread_num();
+        const int start_loop = tid*work_size_per_worker+border_half;
+        //const int local_work_end = tid < (number_of_threads-1) ? start_loop+work_size_per_worker : work_size + border_half;
+        const int local_work_end = start_loop+work_size_per_worker;
+        const int leftover_work = size_y - work_size_per_worker*number_of_threads;
+
+        for(y = start_loop; y < local_work_end; y++)
+        {
+            for(x = border_half; x < size_x-border_half; x++)
+            {
+                #pragma omp for simd collapse(2)
+                for(a = -border_half; a < border_half; a++)
+                {
+                    for(b = -border_half; b < border_half; b++)
+                    {
+                        new_image2[y*size_x+x] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
+                    }
+                }
+                new_image2[y*size_x+x] /= number_of_pixels_in_circle;
+            }
+        }
+        #pragma omp barrier
+
+        #pragma omp for
+        for(y = size_y-leftover_work; y < size_y; y++)
+        {
+            for(x = border_half; x < size_x-border_half; x++)
+            {
+                for(a = -border_half; a < border_half; a++)
+                {
+                    for(b = -border_half; b < border_half; b++)
+                    {
+                        new_image2[y*size_x+x] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
+                    }
+                }
+                new_image2[y*size_x+x] /= number_of_pixels_in_circle;
+            }
+        }
+    }
+
+    std::cout << "Runtime vectorized: " << omp_get_wtime()-start_time << std::endl;
+
+    float residium = 0.0f;
+
+    for(int y = border_half; y < size_y-border_half; y++)
+    {
+        for(int x = border_half; x < size_x-border_half; x++)
+        {
+            residium += new_image[y*size_x+x] - new_image2[y*size_x+x];
+        }
+    }
+
+    std::cout << "Residium: " << residium << std::endl;
+
+
     return 0;
 }
