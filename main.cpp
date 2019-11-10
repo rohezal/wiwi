@@ -3,6 +3,21 @@
 #include <png++/png.hpp>
 //#include <cmath>
 
+int numberOfPixelsInCirlce(int border, int radius_squarded)
+{
+    int border_half = border/2;
+    int counter = 0;
+
+    for(int a = -border_half; a < border_half; a++)
+    {
+        for(int b = -border_half; b < border_half; b++)
+        {
+            counter += (a*a+b*b) < radius_squarded;
+        }
+    }
+
+    return counter;
+}
 
 using namespace std;
 
@@ -75,13 +90,10 @@ int main()
             const float val_fre = frequency_array[y*size_x+x];
             const float val_comb = val_li*val_fre*maximum_frequency; //normalizing the frequency
             combined_array[y*size_x+x] = val_comb;
-            //combined[y][x] = val_comb;
+            combined[y][x] = 0;
 
         }
     }
-
-    //combined.write("combined.png");
-
 
     //create a random image
 
@@ -89,10 +101,30 @@ int main()
     const int border_half = border/2;
     const int border_squared = border*border;
     const float circle_radius_squared = (border/2)*(border/2);
-    const int number_of_pixels_in_circle = 32; //calculate this
+    const int number_of_pixels_in_circle = numberOfPixelsInCirlce(border,circle_radius_squared); //calculate this
+
+    /*
+    // Show a debug cirlce
+    for(int y = border_half; y < border_half+1; y++)
+    {
+        for(int x = border_half; x < border_half+1; x++)
+        {
+            for(int a = -border_half; a < border_half; a++)
+            {
+                for(int b = -border_half; b < border_half; b++)
+                {
+                    combined[y+a][x+b] = (a*a+b*b) < circle_radius_squared;
+                    combined[y+a][x+b] *= 255;
+                }
+            }
+        }
+    }
 
 
 
+    combined.write("combined.png");
+    exit(0);
+    */
 
 
 	int A[1] = {-1};
@@ -216,25 +248,31 @@ int main()
             for(int x = border_half; x < size_x-border_half; x++)
             {
                 float data[border*border] = {0};
+                float sum = 0;
                 sums[tid] = 0;
-                #pragma omp for simd reduction(+:sums[tid]) collapse(2)
+                //#pragma omp for simd collapse(2)
                 for(int a = -border_half; a < border_half; a++)
                 {
                     for(int b = -border_half; b < border_half; b++)
                     {
-                        sums[tid] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
-                        //data[a*border+(b+border_half)] = (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
+                        /*
+                        const int row = a+border_half;
+                        const int col = b+border_half;
+                        const int row_size = border;
+                        */
+                        //sums[tid] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
+                        //data[ row*row_size+col] = (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
+                        data[ (a+border_half) * border + (b+border_half)] = (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
                     }
                 }
 
-                /*
                 for(int i = 0; i < border*border;i++)
                 {
                     sum += data[i];
                 }
-                */
 
-                new_image2[y*size_x+x] = sums[tid] / number_of_pixels_in_circle;
+                new_image2[y*size_x+x] = sum / number_of_pixels_in_circle;
+                //new_image2[y*size_x+x] = sums[tid] / number_of_pixels_in_circle;
             }
         }
         #pragma omp barrier
