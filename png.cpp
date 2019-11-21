@@ -62,11 +62,11 @@ std::vector<std::vector<float> > loadTiff(const std::string& _name)
     return _pixels;
 }
 
-std::pair<size_t, size_t> loadTiffArray(const std::string &_name, float *array)
+std::pair<size_t, size_t> loadTiffArray(const std::string &_name, float **array)
 {
     std::vector<std::vector<float> > image = loadTiff(_name);
 
-    array = new float[image.size() * image.front().size()];
+    *array = new float[image.size() * image.front().size()];
 
     int size_x = image.front().size();
     int size_y = image.size();
@@ -75,8 +75,55 @@ std::pair<size_t, size_t> loadTiffArray(const std::string &_name, float *array)
     {
         for(size_t x = 0; x < size_x; x++)
         {
-            array[y*size_x+x] = image[y][x];
+            (*array)[y*size_x+x] = image[y][x];
         }
     }
     return std::pair<size_t, size_t> (size_y,size_x);
+}
+
+void saveTiffArray(const std::string &_name, float *array, size_t width, size_t height)
+{
+    TIFF *out= TIFFOpen(_name.c_str(), "w");
+    int sampleperpixel = 1;
+    float *image=array;
+
+
+
+    tsize_t linebytes = sizeof(float) * width;     // length in memory of one row of pixel in the image.
+    unsigned char *buf = NULL;        // buffer used to store the row of pixel information for writing to file
+
+    TIFFSetField (out, TIFFTAG_IMAGEWIDTH, width);  // set the width of the image
+    TIFFSetField(out, TIFFTAG_IMAGELENGTH, height);    // set the height of the image
+    TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, 1);   // set number of channels per pixel
+    TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 32);    // set the size of the channels
+    TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
+    //   Some other essential fields to set that you do not have to understand for now.
+    TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+    TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
+    TIFFSetField(out, TIFFTAG_SAMPLEFORMAT, SAMPLEFORMAT_IEEEFP);
+
+    buf =(unsigned char *)_TIFFmalloc(linebytes);
+
+    // We set the strip size of the file to be size of one row of pixels
+    //TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, width*sampleperpixel));
+    TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, 1));
+
+    //Now writing image to the file one strip at a time
+    for (size_t row = 0; row < height; row++)
+    {
+        //memcpy(buf, image+linebytes*row, linebytes);    // check the index here, and figure out why not using h*linebytes
+        //if (TIFFWriteScanline(out, image+width*row, row, 0) < 0)
+        //break;
+        //const size_t offset
+
+        memcpy(buf,image+row*width,linebytes);
+        TIFFWriteScanline(out, buf, row);
+
+    }
+
+    TIFFClose(out);
+    if (buf)
+        _TIFFfree(buf);
+
+
 }

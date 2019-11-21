@@ -9,5 +9,6 @@
 #include <string>
 
 std::vector<std::vector<float> > loadTiff(const std::string& _name);
-std::pair<size_t, size_t> loadTiffArray(const std::string& _name, float* array);
+std::pair<size_t, size_t> loadTiffArray(const std::string& _name, float **array);
+void saveTiffArray(const std::string& _name, float* array, size_t width, size_t height);
 #endif

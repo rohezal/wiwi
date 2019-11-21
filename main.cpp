@@ -30,11 +30,32 @@ int main()
     //const float half_y = size_y*0.5f;
 
     float *tifdata;
-    std::pair<size_t, size_t> tifsize = loadTiffArray("brightness_win1.tif",tifdata);
+    std::pair<size_t, size_t> tifsize = loadTiffArray("brightness_win1.tif",&tifdata);
     const int tsize_x = tifsize.second;
     const int tsize_y = tifsize.first;
 
     std::cout << "Width: " << tsize_x << " | Height: " << tsize_y << std::endl;
+
+    saveTiffArray("output.tif", tifdata,tsize_x, tsize_y);
+
+    std::vector<std::vector<float> > dataxx = loadTiff("brightness_win1.tif");
+
+    png::image<png::gray_pixel_16> test("output_png.png");
+
+    std::cout << "Before: fore loop. ysize:" << tsize_y << " | xsize:" << tsize_x << std::endl;
+    for(int y = 0; y < tsize_y; y++)
+    {
+        for(int x = 0; x < tsize_x; x++)
+        {
+            test[y][x] = tifdata[y*tsize_x+x]*255;
+            //test[y][x] = dataxx[y][x]*255;
+        }
+    }
+
+    std::cout << "Before: test.write(output_png.png)" << std::endl;
+    test.write("output_png.png");
+    exit(0);
+
 
     png::image<png::gray_pixel_16> light("light.png");
     png::image<png::gray_pixel_16> frequency("frequency.png");
@@ -144,6 +165,39 @@ int main()
     }
     */
 
+    /*
+        for(int y = 0; y < border_half; y++)
+        {
+            for(int x = 0; x < size_x; x++)
+            {
+                getValuesInsideCircle(x,y,SIZE);
+            }
+        }
+
+        for(int y = size_y-border_half; y < size_y; y++)
+        {
+            for(int x = 0; x < size_x; x++)
+            {
+                getValuesInsideCircle(x,y,SIZE);
+            }
+        }
+
+        for(int y = 0; y < size_y; y++)
+        {
+            for(int x = 0; x < border_half; x++)
+            {
+                getValuesInsideCircle(x,y,SIZE);
+            }
+        }
+
+        for(int y = 0; y < size_y; y++)
+        {
+            for(int x = size_x-border_half; x < size_x; x++)
+            {
+                getValuesInsideCircle(x,y,SIZE);
+            }
+        }
+    */
 
     std::cout << "Runtime gpu: " << omp_get_wtime()-start_time << std::endl;
 
