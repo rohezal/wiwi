@@ -96,7 +96,7 @@ void saveTiffArray(const std::string &_name, float *array, size_t width, size_t 
     TIFFSetField(out, TIFFTAG_IMAGELENGTH, height);    // set the height of the image
     TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, 1);   // set number of channels per pixel
     TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 32);    // set the size of the channels
-    TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
+    //TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
     //   Some other essential fields to set that you do not have to understand for now.
     TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
     TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_MINISBLACK);
@@ -107,6 +107,7 @@ void saveTiffArray(const std::string &_name, float *array, size_t width, size_t 
     // We set the strip size of the file to be size of one row of pixels
     //TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, width*sampleperpixel));
     TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, 1));
+    TIFFSetField(out, TIFFTAG_COMPRESSION, COMPRESSION_LZW);
 
     //Now writing image to the file one strip at a time
     for (size_t row = 0; row < height; row++)
