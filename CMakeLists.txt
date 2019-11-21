@@ -11,10 +11,11 @@ if (OPENMP_FOUND)
 endif()
 
 find_package(PNG REQUIRED)
+find_package(TIFF REQUIRED)
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS} -fno-stack-protector")
 
 project(image)
 
 add_executable(${PROJECT_NAME} main.cpp png.cpp png.h)
-target_link_libraries(${PROJECT_NAME} ${PNG_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${PNG_LIBRARIES} ${TIFF_LIBRARIES})
