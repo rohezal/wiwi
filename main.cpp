@@ -10,9 +10,9 @@ int numberOfPixelsInCirlce(int border, int radius_squarded)
     int border_half = border/2;
     int counter = 0;
 
-    for(int a = -border_half; a < border_half; a++)
+    for(int a = -border_half; a <= border_half; a++)
     {
-        for(int b = -border_half; b < border_half; b++)
+        for(int b = -border_half; b <= border_half; b++)
         {
             counter += (a*a+b*b) < radius_squarded;
         }
@@ -28,9 +28,9 @@ float getValuesInsideCircle(float* array, size_t x, size_t y, int size_x, int si
     float result = 0;
     const float radius_squarded = _radius_squared;
 
-    for(int a = -border_half; a < border_half; a++)
+    for(int a = -border_half; a <= border_half; a++)
     {
-        for(int b = -border_half; b < border_half; b++)
+        for(int b = -border_half; b <= border_half; b++)
         {
             const int current_position_y = y+a;
             const int current_position_x = x+b;
@@ -154,10 +154,10 @@ int main()
     {
         for(int x = border_half; x < size_x-border_half; x++)
         {
-            for(int a = -border_half; a < border_half; a++)
+            for(int a = -border_half; a <= border_half; a++)
             {
                 //#pragma omp for simd
-                for(int b = -border_half; b < border_half; b++)
+                for(int b = -border_half; b <= border_half; b++)
                 {
                     new_image[y*size_x+x] += (a*a+b*b < circle_radius_squared) * image[(y+a)*size_x+(x+b) ];
                 }
