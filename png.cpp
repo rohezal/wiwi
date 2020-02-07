@@ -47,10 +47,6 @@ std::vector<std::vector<float> > loadTiff(const std::string& _name)
                 //_pixels.back().push_back(reverse_bytes(temp[col]));
                 float* dirty_hack = (float*) &temp[col];
                 _pixels.back().push_back(*dirty_hack);
-                if(col == scanline/depth/2)
-                {
-                    //std::cout << *dirty_hack << std::endl;
-                }
             }
 
 
